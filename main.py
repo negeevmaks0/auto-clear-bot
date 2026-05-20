@@ -16,10 +16,7 @@ from playwright.async_api import async_playwright
 
 from settings import Setting
 
-from telegram.ext import ApplicationBuilder
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-
+import requests
 
 class MainApp(Setting):
     def __init__(self):
@@ -102,10 +99,10 @@ class CreateAntword(Setting):
 
         uns = [False, False]
 
-        if groups[0] == 'Weisenau':
+        if groups[0] == 'Kostheim':
             uns[0] = True
 
-        elif groups[1] == 'Weisenau':
+        elif groups[1] == 'Kostheim':
             uns[1] = True
 
 
@@ -132,29 +129,49 @@ class CreateAntword(Setting):
 
 class Telegram:
     def __init__(self):
-        self.token = '2111646132:AAFrkWTTzbfLsLtVwlOAXd2RUuKDDmJQgiw'
+        self.headers = {
+            "X-API-Key": "ya-silno_liublu-lesiy"
+        }
 
-        self.application = ApplicationBuilder().token(self.token).build()
+        self.bot_api_url = "http://127.0.0.1:9000/send-signal"
 
-
+        
     async def send_message(self, data_to_send):
         url = f"https://web.whatsapp.com/send?phone={data_to_send[0]}&text={data_to_send[1]}"
 
-        keyboard = [
-            [InlineKeyboardButton("Send", url=url)]
-        ]
+        phone = data_to_send[0]
+        raw_text = data_to_send[1]
+        task_type_index = data_to_send[2]
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        for id_ in [865592739, 2085186894]:
-            await self.application.bot.send_message(
+        encoded_text = urllib.parse.quote(raw_text)
+        wa_url = f'https://web.whatsapp.com/send?phone={phone}&text={encoded_text}'
 
-            chat_id = id_,
-            text = ("Привет! Новое распоряжение готово, ссылка для отправки будет ниже.\n\n"
-                    "Краткая информация:\n"
-                    f"Номер телефона: {data_to_send[0]}\n"
-                    f"Тип задания: {('Месячное' if data_to_send[2] else 'Недельное')}"),
-            reply_markup = reply_markup
+        task_type = 'Месячное' if data_to_send[2] else 'Недельное'
+        telegram_message = (
+            "Привет! Новое распоряжение готово, ссылка для отправки будет ниже.\n\n"
+            "Краткая информация:\n"
+            f"Номер телефона: {phone}\n"
+            f"Тип задания: {task_type}"
         )
+
+        payload = {
+            'url': wa_url,
+            'message': telegram_message
+        }
+
+        try:
+            response = requests.post(self.bot_api_url, json=payload, headers=self.headers)
+            
+            if response.status_code == 200:
+                print(f"[Telegram API] Сигнал успешно отправлен боту для типа задания: {('Месячное' if data_to_send[2] else 'Недельное')}")
+
+            else:
+                print(f"[Telegram API] Ошибка сервера бота: {response.status_code} — {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[Telegram API] Не удалось связаться со скриптом бота: {e}")
+
+
 
 
 class WhatsApp:
