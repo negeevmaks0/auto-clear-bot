@@ -56,6 +56,22 @@ class BotPolling:
 
             await self.send_message(url, message)
             return {"status": "sent"}
+        
+
+        @fast_app.post("/send-update")
+        async def receive_signal_update(x_api_key: str = Header(None), data: dict = Body(...)):
+            if x_api_key != self.api_key:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+            message = data.get('message')
+
+            for id_ in self.allowed_ids:
+                await self.application.bot.send_message(
+                    chat_id = id_,
+                    text = message,
+                )
+
+            return {"status": "sent"}
 
 
     async def start(self, update: Update, null):
