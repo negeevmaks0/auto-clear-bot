@@ -28,7 +28,7 @@ class BotPolling:
 
         self.application = ApplicationBuilder().token(self.token).build()
 
-        self.allowed_ids = [865592739]#, 2085186894]
+        self.allowed_ids = [865592739, 2085186894]
         
         logging.basicConfig(
             level=logging.INFO,
