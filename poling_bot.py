@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import (
@@ -26,7 +27,8 @@ class BotPolling:
         self.token = '2111646132:AAFrkWTTzbfLsLtVwlOAXd2RUuKDDmJQgiw'
         self.api_key = "ya-silno_liublu-lesiy"
 
-        self.application = ApplicationBuilder().token(self.token).build()
+        self.application = None# ApplicationBuilder().token(self.token).build()
+        self.server = None
 
         self.allowed_ids = [865592739, 2085186894]
         
@@ -74,7 +76,7 @@ class BotPolling:
             return {"status": "sent"}
 
 
-    async def start(self, update: Update, null):
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         name = update.effective_user.full_name
 
@@ -97,6 +99,7 @@ class BotPolling:
 
 
     async def main(self):
+        self.application = ApplicationBuilder().token(self.token).build()
         self.application.add_handler(CommandHandler('start', self.start))
 
         await self.application.initialize()
