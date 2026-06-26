@@ -41,12 +41,13 @@ class MainApp(Setting):
             month = int(prev.split('.')[0])
 
         texts = list(await self.ca.create(dat, groups))
-        phones = [self.contacts[groups[1]], self.contacts[groups[0]]]
-        enum = [0, 1]
+        phones = [self.contacts[groups[1]], self.contacts[groups[0]], self.contacts[groups[2]]]
+        enum = [0, 1, 2]
 
         if month == dat.month:
             texts.pop(1)
             phones.pop(1)
+            enum.pop(1)
 
 
         for ind, phone, text in zip(enum, phones, texts):
@@ -97,7 +98,7 @@ class CreateAntword(Setting):
             ttask[1] = False
 
 
-        uns = [False, False]
+        uns = [False, False, False]
 
         if groups[0] == 'Kostheim':
             uns[0] = True
@@ -105,25 +106,30 @@ class CreateAntword(Setting):
         elif groups[1] == 'Kostheim':
             uns[1] = True
 
+        elif groups[2] == 'Kostheim':
+            uns[2] = True
+
 
         if uns[0]:
             text_to_return1 = random.choice(list(self.message['uns']['woche'].values())).format(tasks = ttask[0])
-            text_to_return2 = random.choice(list(self.message['uns']['monat'].values())).format(tasks = ttask[1]) if monat else self.message['nope_monat']
 
         else:
             text_to_return1 = random.choice(list(self.message['woche'].values())).format(tasks = ttask[0])
-            text_to_return2 = random.choice(list(self.message['monat'].values())).format(tasks = ttask[1]) if monat else self.message['nope_monat']
 
         if uns[1]:
-            text_to_return1 = random.choice(list(self.message['uns']['woche'].values())).format(tasks = ttask[0])
             text_to_return2 = random.choice(list(self.message['uns']['monat'].values())).format(tasks = ttask[1]) if monat else self.message['nope_monat']
 
         else:
-            text_to_return1 = random.choice(list(self.message['woche'].values())).format(tasks = ttask[0])
             text_to_return2 = random.choice(list(self.message['monat'].values())).format(tasks = ttask[1]) if monat else self.message['nope_monat']
 
+        if uns[2]:
+            text_to_return3 = random.choice(list(self.message['uns']['gast'].values()))
 
-        return text_to_return1, text_to_return2
+        else:
+            text_to_return3 = random.choice(list(self.message['gast'].values()))
+
+
+        return text_to_return1, text_to_return2, text_to_return3
 
 
 
@@ -146,7 +152,15 @@ class Telegram:
         encoded_text = urllib.parse.quote(raw_text)
         wa_url = f'https://web.whatsapp.com/send?phone={phone}&text={encoded_text}'
 
-        task_type = 'Месячное' if data_to_send[2] else 'Недельное'
+        if task_type_index == 1:
+            task_type = 'Месячное'
+
+        elif task_type_index == 2:
+            task_type = 'Гостеприимство'
+
+        else:
+            task_type = 'Недельное'
+
         telegram_message = (
             "Привет! Новое распоряжение готово, ссылка для отправки будет ниже.\n\n"
             "Краткая информация:\n"
@@ -163,7 +177,7 @@ class Telegram:
             response = requests.post(self.bot_api_url, json=payload, headers=self.headers)
             
             if response.status_code == 200:
-                print(f"[Telegram API] Сигнал успешно отправлен боту для типа задания: {('Месячное' if data_to_send[2] else 'Недельное')}")
+                print(f"[Telegram API] Сигнал успешно отправлен боту для типа задания: {('Месячное' if task_type_index == 1 else 'Недельное or Гостеприимство')}")
 
             else:
                 print(f"[Telegram API] Ошибка сервера бота: {response.status_code} — {response.text}")
