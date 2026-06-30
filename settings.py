@@ -15,6 +15,21 @@ class Setting:
             'Russelsheim': '+4915772190270'
         }
 
+        self.motats = {
+            1: 'Januar',
+            2: 'Ferbruar',
+            3: 'März',
+            4: 'April',
+            5: 'Mai',
+            6: 'Juni',
+            7: 'Juli',
+            8: 'August',
+            9: 'September',
+            10: 'Oktober',
+            11: 'November',
+            12: 'Dezember'
+        }
+
         self.group_tasks = {
             '1.5':   {'monat': 'Kostheim',     'woche': 'Kastel',      'gast': ''},
             '1.12':  {'monat': 'Kostheim',     'woche': 'Zenter',      'gast': ''},
