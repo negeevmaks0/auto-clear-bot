@@ -16,6 +16,8 @@ from telegram.ext import (
 import uvicorn
 from fastapi import FastAPI, Body, Header, HTTPException
 
+from environ import Env
+
 
 
 fast_app = FastAPI()
@@ -24,13 +26,17 @@ fast_app = FastAPI()
 
 class BotPolling:
     def __init__(self):
-        self.token = '2111646132:AAFrkWTTzbfLsLtVwlOAXd2RUuKDDmJQgiw'
-        self.api_key = "ya-silno_liublu-lesiy"
+        self.env = Env()
+        self.env.read_env('.env')
 
-        self.application = None# ApplicationBuilder().token(self.token).build()
+        self.token = self.env('API_TOKEN').strip()
+        self.api_key = self.env('X_API_KEY').strip()
+
+        self.allowed_ids = self.env.list('ALLOWED_IDS', subcast=int)
+
+        self.application = None
         self.server = None
 
-        self.allowed_ids = [865592739, 2085186894]
         
         logging.basicConfig(
             level=logging.INFO,
@@ -109,7 +115,12 @@ class BotPolling:
         logging.info('Bot start!')
 
 
-        config = uvicorn.Config(app=fast_app, host='127.0.0.1', port=9000, log_level='info')
+        config = uvicorn.Config(
+            app=fast_app,
+            host=self.env('HOST').strip(),
+            port=self.env('PORT').strip(),
+            log_level='info'
+        )
         self.server = uvicorn.Server(config)
 
         try:

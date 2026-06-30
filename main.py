@@ -1,22 +1,21 @@
 import asyncio
-
 import os
 import sys
-
 import random
 
 import urllib.parse
-
 from pathlib import Path
 
 import datetime
 import calendar
 
 from playwright.async_api import async_playwright
+import requests
 
 from settings import Setting
+from environ import Env
 
-import requests
+
 
 class MainApp(Setting):
     def __init__(self):
@@ -135,16 +134,17 @@ class CreateAntword(Setting):
 
 class Telegram:
     def __init__(self):
+        self.env = Env()
+        self.env.read_env('.env')
+
         self.headers = {
-            "X-API-Key": "ya-silno_liublu-lesiy"
+            "X-API-Key": self.env('X_API_KEY').strip()
         }
 
-        self.bot_api_url = "http://127.0.0.1:9000/send-signal"
+        self.bot_api_url = self.env('BOT_API_URL_SEND').strip()
 
         
     async def send_message(self, data_to_send):
-        url = f"https://web.whatsapp.com/send?phone={data_to_send[0]}&text={data_to_send[1]}"
-
         phone = data_to_send[0]
         raw_text = data_to_send[1]
         task_type_index = data_to_send[2]

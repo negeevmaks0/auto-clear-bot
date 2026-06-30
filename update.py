@@ -1,15 +1,20 @@
 import asyncio
 import requests
 
+from environ import Env
+
 
 
 class TelegramSendUpdate:
     def __init__(self):
+        self.env = Env()
+        self.env.read_env('.env')
+
         self.headers = {
-            "X-API-Key": "ya-silno_liublu-lesiy"
+            "X-API-Key": self.env('X_API_KEY').strip()
         }
 
-        self.bot_api_url = "http://127.0.0.1:9000/send-update"
+        self.bot_api_url = self.env('BOT_API_URL_UPLOAD').strip()
 
         
     async def send_message(self):
