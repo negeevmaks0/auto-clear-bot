@@ -39,40 +39,43 @@ class Excel:
 
     def convert_to_pdf(self):
         if sys.platform.startswith('win'):
-            _convert_windows()
+            return self._convert_windows()
 
         else:
-            _convert_linux()
+            return self._convert_linux()
 
 
-        def _convert_windows():
-            import win32com.client
+    def _convert_windows(self):
+        import win32com.client
 
-            abs_excel_path = os.path.abspath(self.filepath)
-            abs_pdf_path = os.path.abspath(self.filepath_pdf)
+        abs_excel_path = os.path.abspath(self.filepath)
+        abs_pdf_path = os.path.abspath(self.filepath_pdf)
 
-            excel = win32com.client.Dispatch("Excel.Application")
-            excel.Visible = False
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
 
-            wb = excel.Workbooks.Open(abs_excel_path)
-            wb.ActiveSheet.ExportAsFixedFormat(0, abs_pdf_path, Quality=0)
-            wb.Close(False)
+        wb = excel.Workbooks.Open(abs_excel_path)
+        wb.ActiveSheet.ExportAsFixedFormat(0, abs_pdf_path, Quality=0)
+        wb.Close(False)
 
-            excel.Quit()
+        excel.Quit()
 
-        def _convert_linux():
-            import subprocess
+        return self.filepath_pdf
 
-            command = [
-                'libreoffice',
-                '--headless',
-                '--convert-to',
-                'pdf',
-                self.filepath,
-                '--outdir',
-                self.dir_
-            ]
 
-            subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    def _convert_linux(self):
+        import subprocess
+
+        command = [
+            'libreoffice',
+            '--headless',
+            '--convert-to',
+            'pdf',
+            self.filepath,
+            '--outdir',
+            self.dir_
+        ]
+
+        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         return self.filepath_pdf
