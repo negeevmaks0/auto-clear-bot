@@ -39,13 +39,13 @@ class Excel:
 
     def convert_to_pdf(self):
         if sys.platform.startswith('win'):
-            self._convert_windows()
+            _convert_windows()
 
         else:
-            self._convert_linux()
+            _convert_linux()
 
 
-        def _convert_windows(self):
+        def _convert_windows():
             import win32com.client
 
             abs_excel_path = os.path.abspath(self.filepath)
@@ -60,17 +60,19 @@ class Excel:
 
             excel.Quit()
 
-    def _convert_linux(self):
-        import subprocess
-        
-        command = [
-            'libreoffice',
-            '--headless',
-            '--convert-to',
-            'pdf',
-            self.filepath,
-            '--outdir',
-            self.dir_
-        ]
+        def _convert_linux():
+            import subprocess
 
-        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            command = [
+                'libreoffice',
+                '--headless',
+                '--convert-to',
+                'pdf',
+                self.filepath,
+                '--outdir',
+                self.dir_
+            ]
+
+            subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        return self.filepath_pdf
