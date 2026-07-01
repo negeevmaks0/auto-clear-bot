@@ -31,6 +31,8 @@ class Excel:
             for row, val in zip(r_range, data[idx]):
                 ws[f'{col}{row}'] = val
 
+        ws.print_area = 'A1:B23'
+
         ws.sheet_properties.pageSetUpPr.fitToPage = True
         ws.page_setup.fitToWidth = 1
         ws.page_setup.fitToHeight = 0
