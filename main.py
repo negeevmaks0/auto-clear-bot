@@ -61,6 +61,8 @@ class MainApp(Setting):
             phones.pop(1)
             enum.pop(1)
 
+            file = False
+
 
         for ind, phone, text in zip(enum, phones, texts):
             input_data = [phone, text, ind]
@@ -70,7 +72,8 @@ class MainApp(Setting):
             # screen = await self.wa.main(input_data)
             await self.tg.send_message(input_data)
         
-        await self.tg.send_file(file)
+        if file:
+            await self.tg.send_file(file)
 
 
 
