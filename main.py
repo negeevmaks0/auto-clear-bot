@@ -13,7 +13,9 @@ from playwright.async_api import async_playwright
 import requests
 
 from settings import Setting
+from excl import Excel
 from environ import Env
+
 
 
 
@@ -24,6 +26,7 @@ class MainApp(Setting):
         self.ca = CreateAntword()
         # self.wa = WhatsApp()
         self.tg = Telegram()
+        self.ex = Excel()
 
 
     async def main(self):
@@ -40,6 +43,16 @@ class MainApp(Setting):
             month = int(prev.split('.')[0])
 
         texts = list(await self.ca.create(dat, groups))
+
+        tasks = texts.pop(-1)
+        new_tasks = [[], [], []]
+
+        for i in range(0, 3):
+            for task in tasks[1][i]:
+                new_tasks[i].append(tasks[0][task])
+
+        file = self.ex.update_data(new_tasks, tasks[2])
+
         phones = [self.contacts[groups[1]], self.contacts[groups[0]], self.contacts[groups[2]]]
         enum = [0, 1, 2]
 
@@ -56,6 +69,8 @@ class MainApp(Setting):
 
             # screen = await self.wa.main(input_data)
             await self.tg.send_message(input_data)
+        
+        await self.tg.send_file(file)
 
 
 
@@ -128,7 +143,7 @@ class CreateAntword(Setting):
             text_to_return3 = random.choice(list(self.message['gast'].values()))
 
 
-        return text_to_return1, text_to_return2, text_to_return3
+        return text_to_return1, text_to_return2, text_to_return3, [self.tasks, tasks, self.monats[month]]
 
 
 
@@ -142,6 +157,7 @@ class Telegram:
         }
 
         self.bot_api_url = self.env('BOT_API_URL_SEND').strip()
+        self.bot_api_url_file = self.env('BOT_API_URL_FILE').strip()
 
         
     async def send_message(self, data_to_send):
@@ -178,6 +194,27 @@ class Telegram:
             
             if response.status_code == 200:
                 print(f"[Telegram API] Сигнал успешно отправлен боту для типа задания: {('Месячное' if task_type_index == 1 else 'Недельное or Гостеприимство')}")
+
+            else:
+                print(f"[Telegram API] Ошибка сервера бота: {response.status_code} — {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[Telegram API] Не удалось связаться со скриптом бота: {e}")
+
+
+    async def send_file(self, file):
+        telegram_message = "Прикрепляю файл для розпечатки"
+
+        payload = {
+            'file': file,
+            'message': telegram_message
+        }
+
+        try:
+            response = requests.post(self.bot_api_url_file, json=payload, headers=self.headers)
+            
+            if response.status_code == 200:
+                print(f"[Telegram API] Сигнал успешно отправлен боту для типа задания: FILE")
 
             else:
                 print(f"[Telegram API] Ошибка сервера бота: {response.status_code} — {response.text}")

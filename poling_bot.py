@@ -32,7 +32,8 @@ class BotPolling:
         self.token = self.env('API_TOKEN').strip()
         self.api_key = self.env('X_API_KEY').strip()
 
-        self.allowed_ids = self.env.list('ALLOWED_IDS', subcast=int)
+        self.allowed_ids = self.env.list('ALLOWED_IDS', cast=int)
+        # self.allowed_ids = [int(self.env('TEST').strip())]
 
         self.application = None
         self.server = None
@@ -63,6 +64,18 @@ class BotPolling:
             message = data.get('message')
 
             await self.send_message(url, message)
+            return {"status": "sent"}
+
+
+        @fast_app.post("/send-signal-file")
+        async def receive_signal(x_api_key: str = Header(None), data: dict = Body(...)):
+            if x_api_key != self.api_key:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+            file = data.get('file')
+            message = data.get('message')
+
+            await self.send_message_file(file, message)
             return {"status": "sent"}
         
 
@@ -104,6 +117,18 @@ class BotPolling:
             )
 
 
+    async def send_message_file(self, file, message):
+        for id_ in self.allowed_ids:
+            with open(file, 'rb') as document_file:
+                await self.application.bot.send_document(
+                    chat_id = id_,
+                    document = document_file,
+                    caption = message,
+                    read_timeout = 60,
+                    write_timeout = 60
+                )
+
+
     async def main(self):
         self.application = ApplicationBuilder().token(self.token).build()
         self.application.add_handler(CommandHandler('start', self.start))
@@ -118,7 +143,7 @@ class BotPolling:
         config = uvicorn.Config(
             app=fast_app,
             host=self.env('HOST').strip(),
-            port=self.env('PORT').strip(),
+            port=int(self.env('PORT').strip()),
             log_level='info'
         )
         self.server = uvicorn.Server(config)
