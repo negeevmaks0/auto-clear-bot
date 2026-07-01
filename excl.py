@@ -8,10 +8,10 @@ import sys
 class Excel:
     def __init__(self):
         script_path = os.path.abspath(sys.argv[0])
-        dir_ = os.path.dirname(script_path)
+        self.dir_ = os.path.dirname(script_path)
 
-        self.filepath = os.path.join(dir_, 'planung_tasks.xlsx')
-        self.filepath_pdf = os.path.join(dir_, 'planung.pdf')
+        self.filepath = os.path.join(self.dir_, 'planung_tasks.xlsx')
+        self.filepath_pdf = os.path.join(self.dir_, 'planung.pdf')
 
         self.tasks = [
             (range(4, 12), 0, 'A', 8),
@@ -68,7 +68,7 @@ class Excel:
             'pdf',
             self.filepath,
             '--outdir',
-            self.output_dir
+            self.dir_
         ]
 
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
