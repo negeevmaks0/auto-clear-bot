@@ -1,0 +1,51 @@
+from openpyxl import load_workbook
+import win32com.client
+
+import os
+import sys
+
+
+
+class Excel:
+    def __init__(self):
+        script_path = os.path.abspath(sys.argv[0])
+        dir_ = os.path.dirname(script_path)
+
+        self.filepath = os.path.join(dir_, 'planung_tasks.xlsx')
+        self.filepath_pdf = os.path.join(dir_, 'planung.pdf')
+
+        self.tasks = [
+            (range(4, 12), 0, 'A', 8),
+            (range(13, 24), 1, 'A', 11),
+            (range(3, 15), 2, 'B', 12)
+        ]
+
+
+    def update_data(self, data, monat_):
+        wb = load_workbook(self.filepath)
+        ws = wb.active
+
+        ws['A1'] = monat_
+
+        for r_range, idx, col, length in self.tasks:
+            data[idx].extend(['-----'] * (length - len(data[idx])))
+
+            for row, val in zip(r_range, data[idx]):
+                ws[f'{col}{row}'] = val
+
+        wb.save(self.filepath)
+
+        return self.convert_to_pdf()
+
+
+    def convert_to_pdf(self):
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
+
+        wb = excel.Workbooks.Open(self.filepath)
+        wb.ActiveSheet.ExportAsFixedFormat(0, self.filepath_pdf, Quality=0)
+
+        wb.Close(False)
+        excel.Quit()
+
+        return self.filepath_pdf
