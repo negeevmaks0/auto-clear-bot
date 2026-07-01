@@ -61,6 +61,8 @@ class Excel:
             excel.Quit()
 
     def _convert_linux(self):
+        import subprocess
+        
         command = [
             'libreoffice',
             '--headless',
