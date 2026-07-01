@@ -1,5 +1,4 @@
 from openpyxl import load_workbook
-import win32com.client
 
 import os
 import sys
@@ -39,13 +38,37 @@ class Excel:
 
 
     def convert_to_pdf(self):
-        excel = win32com.client.Dispatch("Excel.Application")
-        excel.Visible = False
+        if sys.platform.startswith('win'):
+            self._convert_windows()
 
-        wb = excel.Workbooks.Open(self.filepath)
-        wb.ActiveSheet.ExportAsFixedFormat(0, self.filepath_pdf, Quality=0)
+        else:
+            self._convert_linux()
 
-        wb.Close(False)
-        excel.Quit()
 
-        return self.filepath_pdf
+        def _convert_windows(self):
+            import win32com.client
+
+            abs_excel_path = os.path.abspath(self.filepath)
+            abs_pdf_path = os.path.abspath(self.filepath_pdf)
+
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = False
+
+            wb = excel.Workbooks.Open(abs_excel_path)
+            wb.ActiveSheet.ExportAsFixedFormat(0, abs_pdf_path, Quality=0)
+            wb.Close(False)
+
+            excel.Quit()
+
+    def _convert_linux(self):
+        command = [
+            'libreoffice',
+            '--headless',
+            '--convert-to',
+            'pdf',
+            self.filepath,
+            '--outdir',
+            self.output_dir
+        ]
+
+        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
