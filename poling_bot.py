@@ -34,8 +34,8 @@ class BotPolling:
         self.token = self.env('API_TOKEN').strip()
         self.api_key = self.env('X_API_KEY').strip()
 
-        self.allowed_ids = self.env.list('ALLOWED_IDS', cast=int)
-        # self.allowed_ids = [int(self.env('TEST').strip())]
+        # self.allowed_ids = self.env.list('ALLOWED_IDS', cast=int)
+        self.allowed_ids = [int(self.env('TEST').strip())]
 
         self.application = None
         self.server = None

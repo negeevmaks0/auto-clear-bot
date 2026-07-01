@@ -31,7 +31,12 @@ class Excel:
             for row, val in zip(r_range, data[idx]):
                 ws[f'{col}{row}'] = val
 
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+
         wb.save(self.filepath)
+        wb.close()
 
         return self.convert_to_pdf()
 

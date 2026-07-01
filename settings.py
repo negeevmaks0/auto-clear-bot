@@ -56,8 +56,8 @@ class Setting:
             '6.8':   {'monat': 'Kastel',       'woche': 'Weisenau',    'gast': ''},
             '6.15':  {'monat': 'Kastel',       'woche': 'Kostheim',    'gast': ''},
             '6.22':  {'monat': 'Kastel',       'woche': 'Zenter',      'gast': ''},
-            '6.29':  {'monat': 'Altstadt',     'woche': 'Russelsheim', 'gast': 'Kastel'     },
-            '7.1':   {'monat': 'Altstadt',     'woche': 'Kastel',      'gast': 'Gonsenheim' }, #66666666666666666666666666666666666
+            '7.1':   {'monat': 'Altstadt',     'woche': 'Russelsheim', 'gast': 'Kastel'     },
+            '7.6':   {'monat': 'Altstadt',     'woche': 'Kastel',      'gast': 'Gonsenheim' }, #66666666666666666666666666666666666
             '7.13':  {'monat': 'Altstadt',     'woche': 'Lerchenberg', 'gast': 'Altstadt'   },
             '7.20':  {'monat': 'Altstadt',     'woche': 'Neustadt',    'gast': ''},
             '7.27':  {'monat': 'Altstadt',     'woche': 'Gonsenheim',  'gast': ''},
