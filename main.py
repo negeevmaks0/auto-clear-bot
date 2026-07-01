@@ -149,8 +149,10 @@ class CreateAntword(Setting):
 
 class Telegram:
     def __init__(self):
+        dir_ = os.path.dirname(os.path.abspath(__file__))
+        
         self.env = Env()
-        self.env.read_env('.env')
+        self.env.read_env(os.path.join(dir_, '.env'))
 
         self.headers = {
             "X-API-Key": self.env('X_API_KEY').strip()

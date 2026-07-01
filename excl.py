@@ -7,8 +7,7 @@ import sys
 
 class Excel:
     def __init__(self):
-        script_path = os.path.abspath(sys.argv[0])
-        self.dir_ = os.path.dirname(script_path)
+        self.dir_ = os.path.dirname(os.path.abspath(__file__))
 
         self.filepath = os.path.join(self.dir_, 'planung_tasks.xlsx')
         self.filepath_pdf = os.path.join(self.dir_, 'planung_tasks.pdf')

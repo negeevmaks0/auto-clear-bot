@@ -26,8 +26,10 @@ fast_app = FastAPI()
 
 class BotPolling:
     def __init__(self):
+        dir_ = os.path.dirname(os.path.abspath(__file__))
+        
         self.env = Env()
-        self.env.read_env('.env')
+        self.env.read_env(os.path.join(dir_, '.env'))
 
         self.token = self.env('API_TOKEN').strip()
         self.api_key = self.env('X_API_KEY').strip()
