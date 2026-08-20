@@ -48,8 +48,9 @@ class MainApp(Setting):
         new_tasks = [[], [], []]
 
         for i in range(0, 3):
-            for task in tasks[1][i]:
-                new_tasks[i].append(tasks[0][task])
+            if tasks[1][i]:
+                for task in tasks[1][i]:
+                    new_tasks[i].append(tasks[0][task])
 
         file = self.ex.update_data(new_tasks, tasks[2])
 
@@ -90,7 +91,7 @@ class CreateAntword(Setting):
             month += 1
 
         mittwoch, samstag, monat = self.planung[month].values()
-        tasks = [mittwoch, samstag, monat if monat else False]
+        tasks = [mittwoch, samstag, monat if monat else None]
         ttask = ['', '']
 
 
