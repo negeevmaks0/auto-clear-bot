@@ -3,6 +3,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+from collect_data import CollectData
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import (
     ApplicationBuilder, 
@@ -39,6 +41,8 @@ class BotPolling:
 
         self.application = None
         self.server = None
+
+        self.cd = CollectData()
 
         
         logging.basicConfig(
@@ -106,6 +110,25 @@ class BotPolling:
         await update.message.reply_text("Deine ID ist erfolgreich gespeichert!")
 
 
+    async def processor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+
+        if update.message.document:
+            doc = update.message.document
+
+            file_id = doc.file_id
+            file_name = doc.file_name
+
+            if '' not in file_name:
+                return 
+
+            telegram_file = await context.bot.get_file(file_id)
+
+            download_path = f'./downloads/{file_name}'
+            await telegram_file.download_to_drive(download_path)
+
+            await self.cd.main(download_path)
+
 
     async def send_message(self, url, message):
         keyboard = [[InlineKeyboardButton("Send", url=url)]]
@@ -134,6 +157,7 @@ class BotPolling:
     async def main(self):
         self.application = ApplicationBuilder().token(self.token).build()
         self.application.add_handler(CommandHandler('start', self.start))
+        self.application.add_handler(MessageHandler(filters.Document.ALL, self.processor))
 
         await self.application.initialize()
         await self.application.start()
