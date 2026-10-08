@@ -1,9 +1,11 @@
 import os
+import re
 import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from collect_data import CollectData
+from db import DataBase
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import (
@@ -43,6 +45,7 @@ class BotPolling:
         self.server = None
 
         self.cd = CollectData()
+        self.db = DataBase()
 
         
         logging.basicConfig(
@@ -110,6 +113,38 @@ class BotPolling:
         await update.message.reply_text("Deine ID ist erfolgreich gespeichert!")
 
 
+    async def confirm_save_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        await query.answer()
+
+        pending_data = context.user_data.get('pending_schedule')
+
+        if pending_data:
+            await self.db.save_parsed_schedule(pending_data)
+
+            context.user_data.pop('pending_schedule', None)
+            
+            await query.edit_message_text(
+                text="<b>✅ Изменения успешно применены и сохранены в базу данных!</b>",
+                parse_mode="HTML"
+            )
+
+        else:
+            await query.edit_message_text(text="❌ Ошибка: Данные устарели или не найдены. Попробуйте загрузить файл заново.")
+
+
+    async def cancel_save_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        await query.answer()
+
+        context.user_data.pop('pending_schedule', None)
+
+        await query.edit_message_text(
+            text="<b>❌ Изменения отменены. База данных не была изменена.</b>",
+            parse_mode="HTML"
+        )
+
+
     async def processor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
 
@@ -119,7 +154,8 @@ class BotPolling:
             file_id = doc.file_id
             file_name = doc.file_name
 
-            if '' not in file_name:
+            if 'docx' not in file_name:
+                await update.message.reply_text('❌ Неверный формат документа!')
                 return 
 
             telegram_file = await context.bot.get_file(file_id)
@@ -127,7 +163,40 @@ class BotPolling:
             download_path = f'./downloads/{file_name}'
             await telegram_file.download_to_drive(download_path)
 
-            await self.cd.main(download_path)
+            if await self.cd.check_file(download_path):
+                new_data = await self.cd.main(download_path)
+                diff = await self.db.compare_schedule(new_data)
+
+                if not diff:
+                    await update.message.reply_text("📋 Данные в файле полностью совпадают с текущей базой данных. Изменений нет.")
+                    return
+
+                report_text = "<b>🔔 Обнаружены изменения в расписании!</b>\n\n"
+
+                for item in diff:
+                    report_text += f"📅 <b>Дата: {item['date']}</b>\n"
+                    report_text += "\n".join(item['changes']) + "\n\n"
+                
+                report_text += "Вы подтверждаете замену этих полей в базе данных?"
+
+                context.user_data['pending_schedule'] = new_data
+
+                keyboard = [
+                    [
+                        InlineKeyboardButton("✅ Подтвердить", callback_data="confirm_db_save"),
+                        InlineKeyboardButton("❌ Отмена", callback_data="cancel_db_save")
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_text(
+                    report_text, 
+                    parse_mode="HTML", 
+                    reply_markup=reply_markup
+                )
+
+            else:
+                await update.message.reply_text('❌ Неверный формат документа!')
 
 
     async def send_message(self, url, message):
@@ -159,9 +228,12 @@ class BotPolling:
         self.application.add_handler(CommandHandler('start', self.start))
         self.application.add_handler(MessageHandler(filters.Document.ALL, self.processor))
 
+        self.application.add_handler(CallbackQueryHandler(self.confirm_save_callback, pattern=re.compile("^confirm_db_save$")))
+        self.application.add_handler(CallbackQueryHandler(self.cancel_save_callback, pattern=re.compile("^cancel_db_save$")))
+
         await self.application.initialize()
         await self.application.start()
-        await self.application.updater.start_polling()
+        await self.application.updater.start_polling(allowed_updates=["message", "callback_query"])
 
         logging.info('Bot start!')
 

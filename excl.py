@@ -59,12 +59,32 @@ class Excel:
 
         excel = win32com.client.Dispatch("Excel.Application")
         excel.Visible = False
+        excel.DisplayAlerts = False
+        # excel.ScreenUpdating = False
 
-        wb = excel.Workbooks.Open(abs_excel_path)
-        wb.ActiveSheet.ExportAsFixedFormat(0, abs_pdf_path, Quality=0)
-        wb.Close(False)
+        wb = None
+        try:
+            wb = excel.Workbooks.Open(abs_excel_path, ReadOnly=True)
+            wb.ActiveSheet.ExportAsFixedFormat(0, abs_pdf_path, Quality=0)
+            print("✅ PDF успешно сгенерирован!")
+            
+        except Exception as e:
+            print(f"⚠️ Предупреждение: Ошибка конвертации в PDF на Windows (Принтер недоступен): {e}")
+            print("ℹ️ Скрипт продолжает работу. На сервере Linux этой ошибки не будет.")
+            
+        finally:
+            if wb:
+                try:
+                    wb.Close(SaveChanges=False)
 
-        excel.Quit()
+                except Exception:
+                    pass
+
+            try:
+                excel.Quit()
+
+            except Exception:
+                pass
 
         return self.filepath_pdf
 

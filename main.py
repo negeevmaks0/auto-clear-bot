@@ -15,6 +15,7 @@ import requests
 from settings import Setting
 from excl import Excel
 from environ import Env
+from db import DataBase
 
 
 
@@ -23,39 +24,67 @@ class MainApp(Setting):
     def __init__(self):
         super().__init__()
 
-        self.ca = CreateAntword()
-        # self.wa = WhatsApp()
+        self.db = DataBase()
+
+        self.ca = CreateAntword(self.db)
         self.tg = Telegram()
         self.ex = Excel()
 
 
     async def main(self):
         dat = datetime.date.today()
-        groups = list(self.group_tasks[f'{dat.month}.{dat.day}'].values())
 
-        keys = list(self.group_tasks.keys())
-        index = keys.index(f'{dat.month}.{dat.day}')
-        prev = keys[index - 1] if index > 0 else None
+        groups, keys, date_str = self.db.get_group_tasks_by_date(dat)
+
+        try:
+            raw_keys = [k[0] if isinstance(k, tuple) else k for k in keys]
+
+            def to_real_date(key_str):
+                y, m, d = map(int, key_str.split('.'))
+                return datetime.date(2000 + y, m, d)
+
+            clean_keys = sorted(raw_keys, key=to_real_date)
+
+            index = clean_keys.index(date_str)
+            prev = clean_keys[index - 1] if index > 0 else None
+
+        except ValueError:
+            prev = None
 
         month = None
 
         if prev:
-            month = int(prev.split('.')[0])
+            month = int(prev.split('.')[1])
 
         texts = list(await self.ca.create(dat, groups))
 
-        tasks = texts.pop(-1)
+        excel_package = texts.pop(-1) 
+        db_tasks = excel_package[0]
+        active_task_ids = excel_package[1]
+        month_name = excel_package[2]
+
         new_tasks = [[], [], []]
 
         for i in range(0, 3):
-            if tasks[1][i]:
-                for task in tasks[1][i]:
-                    new_tasks[i].append(tasks[0][task])
+            if i < len(active_task_ids) and active_task_ids[i]:
+                for task_id in active_task_ids[i]:
+                    task_text = db_tasks.get(task_id)
 
-        file = self.ex.update_data(new_tasks, tasks[2])
+                    if task_text:
+                        new_tasks[i].append(task_text)
 
-        phones = [self.contacts[groups[1]], self.contacts[groups[0]], self.contacts[groups[2]]]
+        print(f"Передаем в Excel месяц: {month_name}")
+        file = self.ex.update_data(new_tasks, month_name)
+
+        phones = [
+            self.db.get_contact_phone(groups[1]), 
+            self.db.get_contact_phone(groups[0]), 
+            self.db.get_contact_phone(groups[2])
+        ]
         enum = [0, 1, 2]
+
+        if not texts[2]:
+            texts.pop(-1)
 
         if month == dat.month:
             texts.pop(1)
@@ -64,13 +93,11 @@ class MainApp(Setting):
 
             file = False
 
-
         for ind, phone, text in zip(enum, phones, texts):
             input_data = [phone, text, ind]
 
             print(input_data)
 
-            # screen = await self.wa.main(input_data)
             await self.tg.send_message(input_data)
         
         if file:
@@ -79,8 +106,10 @@ class MainApp(Setting):
 
 
 class CreateAntword(Setting):
-    def __init__(self):
+    def __init__(self, db_instance):
         super().__init__()
+
+        self.db = db_instance
 
 
     async def create(self, dat, groups):
@@ -90,7 +119,15 @@ class CreateAntword(Setting):
         if last_day - 2 <= day:
             month += 1
 
-        mittwoch, samstag, monat = self.planung[month].values()
+        short_year = str(year)[2:]
+        month_key = f'{month}.{short_year}'
+
+        db_planung, db_tasks, db_messages = self.db.get_planning_and_messages(month_key)
+
+        mittwoch = db_planung["mittwoch"]
+        samstag = db_planung["samstag"]
+        monat = db_planung["monat"]
+
         tasks = [mittwoch, samstag, monat if monat else None]
         ttask = ['', '']
 
@@ -99,18 +136,18 @@ class CreateAntword(Setting):
             ttask[0] += 'Четверг:\n\n'
 
             for task in tasks[0]:
-                ttask[0] += f'{self.tasks[task]}\n'
+                ttask[0] += f'{db_tasks.get(task, "")}\n'
 
         if tasks[1]:
             ttask[0] += '\nВоскресенье:\n\n' if ttask[0] else 'Воскресенье:\n\n'
 
             for task in tasks[1]:
-                ttask[0] += f'{self.tasks[task]}\n'
+                ttask[0] += f'{db_tasks.get(task, "")}\n'
 
 
         if tasks[2]:
             for task in tasks[2]:
-                ttask[1] += f'{self.tasks[task]}\n'
+                ttask[1] += f'{db_tasks.get(task, "")}\n'
 
         else:
             ttask[1] = False
@@ -118,36 +155,33 @@ class CreateAntword(Setting):
 
         uns = [False, False, False]
 
-        if groups[0] == 'Kostheim':
-            uns[0] = True
-
-        elif groups[1] == 'Kostheim':
-            uns[1] = True
-
-        elif groups[2] == 'Kostheim':
-            uns[2] = True
-
+        if groups[0] == 'Kastel': uns[0] = True
+        elif groups[1] == 'Kastel': uns[1] = True
+        elif groups[2] == 'Kastel': uns[2] = True
 
         if uns[0]:
-            text_to_return1 = random.choice(list(self.message['uns']['woche'].values())).format(tasks = ttask[0])
+            text_to_return1 = random.choice(list(db_messages['uns']['woche'].values())).format(tasks=ttask[0])
 
         else:
-            text_to_return1 = random.choice(list(self.message['woche'].values())).format(tasks = ttask[0])
+            text_to_return1 = random.choice(list(db_messages['woche'].values())).format(tasks=ttask[0])
 
         if uns[1]:
-            text_to_return2 = random.choice(list(self.message['uns']['monat'].values())).format(tasks = ttask[1]) if monat else self.message['nope_monat']
+            text_to_return2 = random.choice(list(db_messages['uns']['monat'].values())).format(tasks=ttask[1]) if monat else db_messages['uns']['nope_monat']
 
         else:
-            text_to_return2 = random.choice(list(self.message['monat'].values())).format(tasks = ttask[1]) if monat else self.message['nope_monat']
+            monat_templates = list(db_messages['monat'].values())
+            text_to_return2 = random.choice(monat_templates).format(tasks=ttask[1]) if (monat and monat_templates) else db_messages['uns']['nope_monat']
+
 
         if uns[2]:
-            text_to_return3 = random.choice(list(self.message['uns']['gast'].values()))
+            text_to_return3 = random.choice(list(db_messages['uns']['gast'].values()))
 
         else:
-            text_to_return3 = random.choice(list(self.message['gast'].values()))
+            gast_templates = list(db_messages['gast'].values())
+            text_to_return3 = random.choice(gast_templates) if gast_templates else None
 
 
-        return text_to_return1, text_to_return2, text_to_return3, [self.tasks, tasks, self.monats[month]]
+        return text_to_return1, text_to_return2, text_to_return3, [db_tasks, tasks, self.monats[month]]
 
 
 
@@ -174,14 +208,7 @@ class Telegram:
         encoded_text = urllib.parse.quote(raw_text)
         wa_url = f'https://web.whatsapp.com/send?phone={phone}&text={encoded_text}'
 
-        if task_type_index == 1:
-            task_type = 'Месячное'
-
-        elif task_type_index == 2:
-            task_type = 'Гостеприимство'
-
-        else:
-            task_type = 'Недельное'
+        task_type = 'Месячное' if task_type_index == 1 else ('Гостеприимство' if task_type_index == 2 else 'Недельное')
 
         telegram_message = (
             "Привет! Новое распоряжение готово, ссылка для отправки будет ниже.\n\n"
@@ -227,108 +254,6 @@ class Telegram:
                 
         except requests.exceptions.RequestException as e:
             print(f"[Telegram API] Не удалось связаться со скриптом бота: {e}")
-
-
-
-
-class WhatsApp:
-    def __init__(self):
-        #self.profile_dir = Path("/home/ps-server/ftp/auto_clearbot/profile")
-        self.profile_dir = Path('profile')
-
-        #self.screenshot_dir = Path("/home/ps-server/ftp/auto_clearbot/screenshots")
-        self.screenshot_dir = Path('screenshots')
-
-        self.screenshot_dir.mkdir(exist_ok=True)
-
-        self.url = "https://web.whatsapp.com/send?phone={phone}&text={message}"
-
-
-    def screenshot_filename(self, stage: str):
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        return self.screenshot_dir / f"{timestamp}_{stage}.png"
-
-
-    async def create_profile(self):
-        print("Профиль не найден — создаем первый вход.")
-
-        context = await self.playwright.firefox.launch_persistent_context(
-            user_data_dir=str(self.profile_dir),
-            args=["--start-maximized"]
-        )
-        page = await context.new_page()
-
-        await page.goto("https://web.whatsapp.com")
-        await asyncio.sleep(10)
-        await page.screenshot(path=str(self.screenshot_filename("page_loaded")))
-
-        try:
-            qr_canvas = await page.wait_for_selector("canvas[aria-label='Scan me!']", timeout=60000)
-            await qr_canvas.screenshot(path=str(self.screenshot_filename("qr_code")))
-
-            print(f"QR-код сохранен: {self.screenshot_filename('qr_code')}")
-
-        except:
-            print("QR-код не найден (возможно сессия уже есть)")
-
-        print("Ожидаем сканирования QR и входа...")
-
-        await page.wait_for_selector("div[role='grid']", timeout=0)
-        await page.screenshot(path=str(self.screenshot_filename("logged_in")))
-
-        print("Авторизация выполнена, профиль сохранен.")
-
-        await context.close()
-
-
-    async def send_message(self):
-        context = await self.playwright.firefox.launch_persistent_context(
-            user_data_dir=str(self.profile_dir),
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--window-size=1920,1080"]
-        )
-
-        page = context.pages[0] if context.pages else await context.new_page()
-
-        await page.goto(self.url.format(phone = self.phone, message = self.message))
-
-        try:
-            await page.wait_for_selector("div[contenteditable='true']", timeout=30000)
-            await asyncio.sleep(7)
-
-            await page.keyboard.press("Enter")
-
-            screen = str(self.screenshot_filename("send"))
-            await page.screenshot(path = screen)
-            print("Сообщение отправлено (см. скриншот send).")
-
-            return screen
-
-        except:
-            await page.screenshot(path=str(self.screenshot_filename("error")))
-
-            print("Ошибка: WhatsApp требует QR! См. скриншот error")
-
-        finally:
-            await asyncio.sleep(5)
-            await context.close()
-
-
-    async def main(self, input_data):
-        self.phone = input_data[0]
-        self.message = urllib.parse.quote(input_data[1])
-
-        async with async_playwright() as self.playwright:
-            if not self.profile_dir.exists():
-                self.profile_dir.mkdir(exist_ok=True)
-
-                await self.create_profile()
-                print("Профиль создан. Теперь можно отправлять сообщения этой же командой.")
-
-                return
-
-            screen = await self.send_message()
-
-            return screen
 
 
 
