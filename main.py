@@ -57,6 +57,8 @@ class MainApp(Setting):
             month = int(prev.split('.')[1])
 
         texts = list(await self.ca.create(dat, groups))
+        print(groups)
+        print(date_str)
 
         excel_package = texts.pop(-1) 
         db_tasks = excel_package[0]
@@ -73,18 +75,17 @@ class MainApp(Setting):
                     if task_text:
                         new_tasks[i].append(task_text)
 
-        print(f"Передаем в Excel месяц: {month_name}")
-        file = self.ex.update_data(new_tasks, month_name)
-
         phones = [
-            self.db.get_contact_phone(groups[1]), 
             self.db.get_contact_phone(groups[0]), 
+            self.db.get_contact_phone(groups[1]), 
             self.db.get_contact_phone(groups[2])
         ]
         enum = [0, 1, 2]
 
         if not texts[2]:
             texts.pop(-1)
+
+        file = True
 
         if month == dat.month:
             texts.pop(1)
@@ -101,6 +102,9 @@ class MainApp(Setting):
             await self.tg.send_message(input_data)
         
         if file:
+            print(f"Передаем в Excel месяц: {month_name}")
+            file = self.ex.update_data(new_tasks, month_name)
+
             await self.tg.send_file(file)
 
 
