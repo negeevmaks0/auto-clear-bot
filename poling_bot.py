@@ -31,8 +31,7 @@ fast_app = FastAPI()
 class BotPolling:
     def __init__(self):
         dir_ = os.path.dirname(os.path.abspath(__file__))
-        self.BASE_DIR = Path(__file__).resolve().parent
-        
+
         self.env = Env()
         self.env.read_env(os.path.join(dir_, '.env'))
 
