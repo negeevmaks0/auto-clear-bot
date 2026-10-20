@@ -31,6 +31,7 @@ fast_app = FastAPI()
 class BotPolling:
     def __init__(self):
         dir_ = os.path.dirname(os.path.abspath(__file__))
+        self.BASE_DIR = Path(__file__).resolve().parent
         
         self.env = Env()
         self.env.read_env(os.path.join(dir_, '.env'))
@@ -149,6 +150,10 @@ class BotPolling:
         user_id = update.effective_user.id
 
         if update.message.document:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            downloads_dir = os.path.join(base_dir, 'downloads')
+            os.makedirs(downloads_dir, exist_ok=True)
+
             doc = update.message.document
 
             file_id = doc.file_id
@@ -160,7 +165,7 @@ class BotPolling:
 
             telegram_file = await context.bot.get_file(file_id)
 
-            download_path = f'./downloads/{file_name}'
+            download_path = os.path.join(downloads_dir, file_name)
             await telegram_file.download_to_drive(download_path)
 
             if await self.cd.check_file(download_path):
