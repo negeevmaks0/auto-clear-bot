@@ -36,6 +36,9 @@ class MainApp(Setting):
 
         groups, keys, date_str = self.db.get_group_tasks_by_date(dat)
 
+        if not groups:
+            return
+
         try:
             raw_keys = [k[0] if isinstance(k, tuple) else k for k in keys]
 
