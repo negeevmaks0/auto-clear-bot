@@ -37,6 +37,7 @@ class MainApp(Setting):
         groups, keys, date_str = self.db.get_group_tasks_by_date(dat)
 
         if groups == ['', '', '']:
+            print('No avarible date.')
             return
 
         try:
